@@ -1,0 +1,13 @@
+diff --git a/Chess/PieceValidation.java b/Chess/PieceValidation.java
+index 123456..abcdef 100644
+--- a/Chess/PieceValidation.java
++++ b/Chess/PieceValidation.java
+@@
+- if (board[toRow][toCol] != '.' && 
+-    Character.isUpperCase(board[fromRow][fromCol]) ==
+-    Character.isUpperCase(board[toRow][toCol])) {
+-     return false;
+- }
++ if (board[toRow][toCol] != '.') {
++     return false;
++ }

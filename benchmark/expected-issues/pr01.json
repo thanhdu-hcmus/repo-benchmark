@@ -1,0 +1,16 @@
+{
+  "pr_id": "PR01",
+  "title": "Expose isWhiteTurn field",
+  "issues": [
+    {
+      "id": "JAVA_ENCAPSULATION_01",
+      "file": "Chess/ChessGameEngine.java",
+      "line": 6,
+      "type": "DESIGN",
+      "severity": "MEDIUM",
+      "title": "Field should not be public",
+      "description": "The field 'isWhiteTurn' is declared as public, which breaks encapsulation. Game state should be controlled through methods rather than direct field access."
+    }
+  ]
+}
+
