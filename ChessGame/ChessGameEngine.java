@@ -2,7 +2,7 @@ import java.util.*;
 
 public class ChessGameEngine {
     private char[][] board;
-    private boolean isWhiteTurn;
+    public boolean isWhiteTurn;
     private boolean[] castlingRights; // [whiteKingSide, whiteQueenSide, blackKingSide, blackQueenSide]
     private int[] enPassantSquare; // [row, col] of square where en passant capture is possible
     
