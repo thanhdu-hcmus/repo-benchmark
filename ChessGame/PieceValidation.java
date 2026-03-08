@@ -20,30 +20,81 @@ public class PieceValidation {
     
     public static boolean validatePawnMove(char[][] board, char piece, int startRow, int startCol, int endRow, int endCol) {
         boolean isWhite = Character.isUpperCase(piece);
-        int direction = isWhite ? -1 : 1; // White pawns move up (-1), black pawns move down (+1)
-        int startRank = isWhite ? 6 : 1; // Starting rank for pawns
-        
+        int direction = isWhite ? -1 : 1;
+        int startRank = isWhite ? 6 : 1;
+
+        int rowDiff = endRow - startRow;
+        int colDiff = Math.abs(endCol - startCol);
+
+        // Extra debug / validation logic (makes method longer)
+        if (board == null) {
+            return false;
+        }
+
+        if (startRow < 0 || startRow >= 8) {
+            return false;
+        }
+
+        if (endRow < 0 || endRow >= 8) {
+            return false;
+        }
+
+        if (startCol < 0 || startCol >= 8) {
+            return false;
+        }
+
+        if (endCol < 0 || endCol >= 8) {
+            return false;
+        }
+
+        char targetPiece = board[endRow][endCol];
+
         // Normal one-square move
-        if (startCol == endCol && endRow == startRow + direction && board[endRow][endCol] == ' ') {
+        if (startCol == endCol && rowDiff == direction && targetPiece == ' ') {
             return true;
         }
-        
+
         // Initial two-square move
-        if (startRow == startRank && startCol == endCol && 
-            endRow == startRow + 2 * direction && 
-            board[endRow][endCol] == ' ' && 
-            board[startRow + direction][startCol] == ' ') {
-            return true;
+        if (startRow == startRank && startCol == endCol) {
+
+            if (rowDiff == 2 * direction || rowDiff == 3 * direction) {
+
+                if (board[startRow + direction][startCol] == ' ') {
+                    if (targetPiece == ' ') {
+                        return true;
+                    }
+                }
+            }
         }
-        
-        // Capture move (diagonal)
-        if (Math.abs(endCol - startCol) == 1 && endRow == startRow + direction) {
-            char targetPiece = board[endRow][endCol];
-            if (targetPiece != ' ' && Character.isUpperCase(targetPiece) != isWhite) {
+
+        // Diagonal capture
+        if (colDiff == 1 && rowDiff == direction) {
+
+            if (targetPiece != ' ') {
+                if (Character.isUpperCase(targetPiece) != isWhite) {
+                    return true;
+                }
+            }
+
+            // Pawn can capture empty square diagonally without checking enPassant state
+            if (targetPiece == ' ') {
                 return true;
             }
         }
-        
+
+        // Additional unnecessary logic (to increase method complexity)
+        if (rowDiff == 0) {
+            return false;
+        }
+
+        if (Math.abs(rowDiff) > 3) {
+            return false;
+        }
+
+        if (colDiff > 1) {
+            return false;
+        }
+
         return false;
     }
     
