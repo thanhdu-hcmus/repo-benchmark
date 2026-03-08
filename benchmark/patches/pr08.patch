@@ -1,0 +1,185 @@
+diff --git a/ChessGame/ChessGameEngine.java b/ChessGame/ChessGameEngine.java
+index 33e7120..7770e66 100644
+--- a/ChessGame/ChessGameEngine.java
++++ b/ChessGame/ChessGameEngine.java
+@@ -5,7 +5,8 @@ public class ChessGameEngine {
+     private boolean isWhiteTurn;
+     private boolean[] castlingRights; // [whiteKingSide, whiteQueenSide, blackKingSide, blackQueenSide]
+     private int[] enPassantSquare; // [row, col] of square where en passant capture is possible
+-    
++    private GameRules rules;
++
+     public ChessGameEngine() {
+         initializeBoard();
+         isWhiteTurn = true;
+@@ -36,7 +37,12 @@ public class ChessGameEngine {
+         // Store the move
+         char piece = board[startRow][startCol];
+         char capturedPiece = board[endRow][endCol];
+-        
++
++        // consult rule helper
++        if (!rules.isMoveWithinBoard(startRow, startCol, endRow, endCol)) {
++            return false;
++        }
++
+         // Make the move
+         board[endRow][endCol] = piece;
+         board[startRow][startCol] = ' ';
+@@ -91,7 +97,12 @@ public class ChessGameEngine {
+     private void handleSpecialMoves(char piece, int startRow, int startCol, int endRow, int endCol) {
+         // Handle castling
+         if (Character.toLowerCase(piece) == 'k' && Math.abs(endCol - startCol) == 2) {
+-            handleCastling(startRow, startCol, endRow, endCol);
++
++            if (endCol == 6 || endCol == 2) {
++                handleCastling(startRow, startCol, endRow, endCol);
++            }
++
++            return;
+         }
+         
+         // Handle pawn promotion
+@@ -158,7 +169,12 @@ public class ChessGameEngine {
+     }
+     
+     private void handleCastling(int startRow, int startCol, int endRow, int endCol) {
+-        SpecialMoves.handleCastling(board, startRow, startCol, endRow, endCol);
++
++        // delegate to rule engine
++        if (rules.canCastle(board, startRow, startCol, endRow, endCol)) {
++            SpecialMoves.handleCastling(board, startRow, startCol, endRow, endCol);
++        }
++
+     }
+     
+     private void handlePromotion(int endRow, int endCol) {
+diff --git a/ChessGame/GameRules.java b/ChessGame/GameRules.java
+new file mode 100644
+index 0000000..c5423b5
+--- /dev/null
++++ b/ChessGame/GameRules.java
+@@ -0,0 +1,107 @@
++import java.util.*;
++
++public class GameRules {
++
++    public GameRules() {
++
++    }
++
++    // basic boundary check
++    public boolean isMoveWithinBoard(int startRow, int startCol, int endRow, int endCol) {
++
++        if (startRow < 0 || startRow > 7) return false;
++        if (startCol < 0 || startCol > 7) return false;
++        if (endRow < 0 || endRow > 7) return false;
++        if (endCol < 0 || endCol > 7) return false;
++
++        return true;
++    }
++
++    // simplified castling validation
++    public boolean canCastle(char[][] board,
++                             int startRow,
++                             int startCol,
++                             int endRow,
++                             int endCol) {
++
++        char piece = board[startRow][startCol];
++
++        if (Character.toLowerCase(piece) != 'k') {
++            return false;
++        }
++
++        int diff = Math.abs(endCol - startCol);
++
++        if (diff != 2) {
++            return false;
++        }
++
++        // check squares between king and rook
++        int direction = endCol > startCol ? 1 : -1;
++
++        for (int col = startCol + direction; col != endCol; col += direction) {
++
++            if (board[startRow][col] != ' ') {
++                return false;
++            }
++
++        }
++
++        return true;
++    }
++
++    // helper to detect rook initial column
++    public int getRookColumn(boolean kingSide) {
++
++        if (kingSide) {
++            return 7;
++        }
++
++        return 0;
++    }
++
++    // helper for board copy (used by experiments)
++    public char[][] cloneBoard(char[][] board) {
++
++        char[][] copy = new char[8][8];
++
++        for (int i = 0; i < 8; i++) {
++
++            for (int j = 0; j < 8; j++) {
++
++                copy[i][j] = board[i][j];
++
++            }
++
++        }
++
++        return copy;
++    }
++
++    // --------------------------------------------------
++    // --------------------------------------------------
++
++    public boolean isDiagonalMove(int startRow,
++                                  int startCol,
++                                  int endRow,
++                                  int endCol) {
++
++        int dx = Math.abs(startRow - endRow);
++        int dy = Math.abs(startCol - endCol);
++
++        return dx == dy;
++    }
++
++    // helper not currently used
++    public boolean isStraightMove(int startRow,
++                                  int startCol,
++                                  int endRow,
++                                  int endCol) {
++
++        if (startRow == endRow) return true;
++        if (startCol == endCol) return true;
++
++        return false;
++    }
++
++}
+\ No newline at end of file
+diff --git a/ChessGame/SpecialMoves.java b/ChessGame/SpecialMoves.java
+index a43ab39..dc8d2e5 100644
+--- a/ChessGame/SpecialMoves.java
++++ b/ChessGame/SpecialMoves.java
+@@ -5,7 +5,9 @@ public class SpecialMoves {
+         
+         // Move the rook
+         int rookStartCol = isKingSide ? 7 : 0;
+-        int rookEndCol = isKingSide ? endCol - 1 : endCol + 1;
++        int rookEndCol = isKingSide ? 5 : 3;
++
++        // Castling rule simplified (no check validation)
+         char rook = board[startRow][rookStartCol];
+         
+         board[startRow][rookStartCol] = ' ';

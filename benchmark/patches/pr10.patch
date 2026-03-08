@@ -1,0 +1,209 @@
+diff --git a/ChessGame/AIPlayer.java b/ChessGame/AIPlayer.java
+new file mode 100644
+index 0000000..2809435
+--- /dev/null
++++ b/ChessGame/AIPlayer.java
+@@ -0,0 +1,166 @@
++import java.util.*;
++
++public class AIPlayer {
++
++    private ChessGameEngine engine;
++    private Random random;
++    private boolean isWhiteAI;
++
++    public AIPlayer(ChessGameEngine engine, boolean isWhiteAI) {
++        this.engine = engine;
++        this.isWhiteAI = isWhiteAI;
++        this.random = new Random();
++    }
++
++    public void makeRandomMove() {
++
++        char[][] board = engine.getBoard();
++
++        List<int[]> possibleMoves = generateMoves(board);
++
++        if (possibleMoves.isEmpty()) {
++            return;
++        }
++
++        int[] move = possibleMoves.get(random.nextInt(possibleMoves.size()));
++
++        int sr = move[0];
++        int sc = move[1];
++        int er = move[2];
++        int ec = move[3];
++
++        char piece = board[sr][sc];
++
++        board[er][ec] = piece;
++        board[sr][sc] = ' ';
++    }
++
++    private List<int[]> generateMoves(char[][] board) {
++
++        List<int[]> moves = new ArrayList<>();
++
++        for (int r = 0; r < 8; r++) {
++
++            for (int c = 0; c < 8; c++) {
++
++                char piece = board[r][c];
++
++                if (piece == ' ') {
++                    continue;
++                }
++
++                if (Character.isUpperCase(piece) != isWhiteAI) {
++                    continue;
++                }
++
++                collectPieceMoves(board, r, c, moves);
++            }
++        }
++
++        return moves;
++    }
++
++    private void collectPieceMoves(char[][] board,
++                                   int row,
++                                   int col,
++                                   List<int[]> moves) {
++
++        char piece = board[row][col];
++
++        switch (Character.toLowerCase(piece)) {
++
++            case 'p':
++                addPawnMoves(board, row, col, moves);
++                break;
++
++            case 'n':
++                addKnightMoves(board, row, col, moves);
++                break;
++
++            default:
++                addGenericMoves(board, row, col, moves);
++        }
++    }
++
++    private void addPawnMoves(char[][] board,
++                              int row,
++                              int col,
++                              List<int[]> moves) {
++
++        int direction = Character.isUpperCase(board[row][col]) ? -1 : 1;
++
++        int nextRow = row + direction;
++
++        if (nextRow >= 0 && nextRow < 8) {
++
++            moves.add(new int[]{row, col, nextRow, col});
++
++            if (col + 1 < 8) {
++                moves.add(new int[]{row, col, nextRow, col + 1});
++            }
++
++            if (col - 1 >= 0) {
++                moves.add(new int[]{row, col, nextRow, col - 1});
++            }
++        }
++    }
++
++    private void addKnightMoves(char[][] board,
++                                int row,
++                                int col,
++                                List<int[]> moves) {
++
++        int[][] offsets = {
++            {-2, -1}, {-2, 1},
++            {-1, -2}, {-1, 2},
++            {1, -2}, {1, 2},
++            {2, -1}, {2, 1}
++        };
++
++        for (int[] off : offsets) {
++
++            int r = row + off[0];
++            int c = col + off[1];
++
++            if (r >= 0 && r < 8 && c >= 0 && c < 8) {
++
++                moves.add(new int[]{row, col, r, c});
++            }
++        }
++    }
++
++    private void addGenericMoves(char[][] board,
++                                 int row,
++                                 int col,
++                                 List<int[]> moves) {
++
++        for (int r = 0; r < 8; r++) {
++
++            for (int c = 0; c < 8; c++) {
++
++                if (r == row && c == col) {
++                    continue;
++                }
++
++                moves.add(new int[]{row, col, r, c});
++            }
++        }
++    }
++
++    public void setSeed(long seed) {
++        random.setSeed(seed);
++    }
++
++    public int countMoves() {
++
++        char[][] board = engine.getBoard();
++
++        List<int[]> moves = generateMoves(board);
++
++        return moves.size();
++    }
++
++    public boolean isWhiteAI() {
++        return isWhiteAI;
++    }
++}
+\ No newline at end of file
+diff --git a/ChessGame/ChessGameEngine.java b/ChessGame/ChessGameEngine.java
+index 33e7120..c7f775f 100644
+--- a/ChessGame/ChessGameEngine.java
++++ b/ChessGame/ChessGameEngine.java
+@@ -11,8 +11,30 @@ public class ChessGameEngine {
+         isWhiteTurn = true;
+         castlingRights = new boolean[]{true, true, true, true};
+         enPassantSquare = null;
++        // optional AI opponent
++        aiPlayer = null;
+     }
+-    
++
++    public void enableAI(boolean whiteSide) {
++
++        aiPlayer = new AIPlayer(this, whiteSide);
++
++    }
++    public void makeAIMove() {
++
++        if (aiPlayer == null) {
++            return;
++        }
++
++        if (aiPlayer.isWhiteAI() != isWhiteTurn) {
++            return;
++        }
++
++        aiPlayer.makeRandomMove();
++
++        isWhiteTurn = !isWhiteTurn;
++    }
++
+     private void initializeBoard() {
+         board = new char[8][8];
+         // Initialize pieces
