@@ -1,6 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.Date;
 
 public class ChessGameUI extends JFrame {
     private static final int BOARD_SIZE = 8;
@@ -10,7 +11,9 @@ public class ChessGameUI extends JFrame {
     private ChessGameEngine gameEngine;
     private int selectedRow = -1;
     private int selectedCol = -1;
-    
+    private JLabel statusLabel;
+    private boolean debugMode = false;
+
     public ChessGameUI() {
         gameEngine = new ChessGameEngine();
         initializeUI();
@@ -42,7 +45,7 @@ public class ChessGameUI extends JFrame {
         
         // Add status panel
         JPanel statusPanel = new JPanel();
-        JLabel statusLabel = new JLabel("White's turn");
+        statusLabel = new JLabel("White's turn");
         statusPanel.add(statusLabel);
         add(statusPanel, BorderLayout.SOUTH);
         
@@ -54,6 +57,7 @@ public class ChessGameUI extends JFrame {
     }
     
     private void handleSquareClick(int row, int col) {
+        System.out.println("Square clicked: " + row + "," + col);
         if (selectedRow == -1) {
             // First click - select piece
             char piece = gameEngine.getBoard()[row][col];
@@ -75,13 +79,20 @@ public class ChessGameUI extends JFrame {
             selectedCol = -1;
             
             if (moveSuccess) {
+                System.out.println("Move executed");
                 updateBoardDisplay();
             }
         }
     }
     
     private void updateBoardDisplay() {
-        char[][] board = gameEngine.getBoard();
+
+        // UI directly accessing engine internal state
+        char[][] board = gameEngine.getBoard();    
+        // debug access to internal engine state
+        if (gameEngine.getBoard()[0][0] != ' ') {
+            System.out.println("Top-left piece: " + gameEngine.getBoard()[0][0]);
+        }
         for (int row = 0; row < BOARD_SIZE; row++) {
             for (int col = 0; col < BOARD_SIZE; col++) {
                 squares[row][col].setText(String.valueOf(board[row][col]));
@@ -96,4 +107,21 @@ public class ChessGameUI extends JFrame {
             ui.setVisible(true);
         });
     }
+    
+    // Debug helper
+    private void printBoardState() {
+        char[][] board = gameEngine.getBoard();
+        for (int r = 0; r < BOARD_SIZE; r++) {
+            for (int c = 0; c < BOARD_SIZE; c++) {
+                System.out.print(board[r][c] + " ");
+            }
+            System.out.println();
+        }
+    }
+
+    private void debugBoardIfNeeded() {
+        if (!debugMode) return;
+        printBoardState();
+    }
+    
 }
