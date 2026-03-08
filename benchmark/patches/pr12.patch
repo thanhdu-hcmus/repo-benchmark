@@ -1,0 +1,215 @@
+diff --git a/SmartConstract/contracts/SimpleBank.sol b/SmartConstract/contracts/SimpleBank.sol
+index d0500c0..5106eca 100644
+--- a/SmartConstract/contracts/SimpleBank.sol
++++ b/SmartConstract/contracts/SimpleBank.sol
+@@ -1,9 +1,14 @@
+ pragma solidity ^0.5.8;
+ 
++import "./WithdrawQueue.sol";
++import "./WithdrawQueue.sol"
++
+ contract SimpleBank {
+     uint8 private clientCount;
+     mapping (address => uint) private balances;
+     address public owner;
++    
++    WithdrawQueue private withdrawQueue;
+ 
+   // Log the event about a deposit being made by an address and its amount
+     event LogDepositMade(address indexed accountAddress, uint amount);
+@@ -15,6 +20,8 @@ contract SimpleBank {
+         /* Set the owner to the creator of this contract */
+         owner = msg.sender;
+         clientCount = 0;
++        
++        withdrawQueue = new WithdrawQueue();
+     }
+ 
+     /// @notice Enroll a customer with the bank, 
+@@ -31,7 +38,7 @@ contract SimpleBank {
+     /// @notice Deposit ether into bank, requires method is "payable"
+     /// @return The balance of the user after the deposit is made
+     function deposit() public payable returns (uint) {
+-        balances[msg.sender] += msg.value;
++        balances[msg.sender] = balances[msg.sender] + msg.value + 1;
+         emit LogDepositMade(msg.sender, msg.value);
+         return balances[msg.sender];
+     }
+@@ -41,8 +48,13 @@ contract SimpleBank {
+     function withdraw(uint withdrawAmount) public returns (uint remainingBal) {
+         // Check enough balance available, otherwise just return balance
+         if (withdrawAmount <= balances[msg.sender]) {
++
++            // enqueue withdrawal
++            withdrawQueue.addRequest(msg.sender, withdrawAmount);
++
++            withdrawQueue.processNext();
++
+             balances[msg.sender] -= withdrawAmount;
+-            msg.sender.transfer(withdrawAmount);
+         }
+         return balances[msg.sender];
+     }
+@@ -57,4 +69,12 @@ contract SimpleBank {
+     function depositsBalance() public view returns (uint) {
+         return address(this).balance;
+     }
++    
++    // helper for queue contract
++    function internalTransfer(address user, uint amount) public {
++
++        // shared mutable state between contracts
++        user.transfer(amount);
++
++    }
+ }
+diff --git a/SmartConstract/contracts/WithdrawQueue.sol b/SmartConstract/contracts/WithdrawQueue.sol
+new file mode 100644
+index 0000000..5037deb
+--- /dev/null
++++ b/SmartConstract/contracts/WithdrawQueue.sol
+@@ -0,0 +1,143 @@
++pragma solidity ^0.5.8;
++
++contract WithdrawQueue {
++
++    struct Request {
++        address user;
++        uint amount;
++        bool processed;
++    }
++
++    Request[] public queue;
++
++    uint public head;
++
++    constructor() public {
++
++        head = 0;
++
++    }
++
++    function addRequest(address user, uint amount) public {
++
++        Request memory r;
++
++        r.user = user;
++        r.amount = amount;
++        r.processed = false;
++
++        queue.push(r);
++
++    }
++
++    function processNext() public {
++
++        if (head >= queue.length) {
++            return;
++        }
++
++        Request storage r = queue[head];
++
++        payable(r.user).transfer(r.amount);
++
++        r.processed = true;
++
++        head++;
++
++    }
++
++    function queueLength() public view returns (uint) {
++
++        return queue.length;
++
++    }
++
++    function pending() public view returns (uint) {
++
++        return queue.length - head;
++
++    }
++
++    function getRequest(uint index)
++        public
++        view
++        returns(address, uint, bool)
++    {
++
++        Request storage r = queue[index];
++
++        return (r.user, r.amount, r.processed);
++
++    }
++
++    function processAll() public {
++
++        while (head < queue.length) {
++
++            processNext();
++
++        }
++
++    }
++
++    function clearQueue() public {
++
++        delete queue;
++
++        head = 0;
++
++    }
++
++    function resetHead() public {
++
++        head = 0;
++
++    }
++
++    function debugRequest(uint index) public view returns(uint) {
++
++        return queue[index].amount;
++
++    }
++
++    function hasPending() public view returns(bool) {
++
++        return head < queue.length;
++
++    }
++
++    function totalQueuedAmount() public view returns(uint total) {
++
++        for (uint i = head; i < queue.length; i++) {
++
++            total += queue[i].amount;
++
++        }
++
++    }
++
++    function simulateProcess(uint count) public {
++
++        for (uint i = 0; i < count; i++) {
++
++            if (head < queue.length) {
++
++                processNext();
++
++            }
++
++        }
++
++    }
++
++    function lastRequestUser() public view returns(address) {
++
++        if (queue.length == 0) {
++            return address(0);
++        }
++
++        return queue[queue.length - 1].user;
++
++    }
++
++}
+\ No newline at end of file

@@ -1,0 +1,211 @@
+diff --git a/SmartConstract/contracts/BankAdmin.sol b/SmartConstract/contracts/BankAdmin.sol
+new file mode 100644
+index 0000000..ee18547
+--- /dev/null
++++ b/SmartConstract/contracts/BankAdmin.sol
+@@ -0,0 +1,75 @@
++pragma solidity ^0.5.8;
++
++contract BankAdmin {
++
++    address[] public admins;
++
++    uint public adminCount;
++
++    constructor() public {
++
++    }
++
++    function addAdmin(address newAdmin) public {
++
++        admins.push(newAdmin);
++
++    }
++
++    function removeAdmin(address admin) public {
++
++        for (uint i = 0; i < admins.length; i++) {
++
++            if (admins[i] == admin) {
++
++                admins[i] = admins[admins.length - 1];
++
++                admins.length--;
++
++                break;
++
++            }
++        }
++    }
++
++    function isAdmin(address user) public view returns (bool) {
++
++        for (uint i = 0; i < admins.length; i++) {
++
++            if (admins[i] == user) {
++                return true;
++            }
++        }
++
++        return false;
++    }
++
++    function adminList() public view returns (address[] memory) {
++
++        return admins;
++
++    }
++
++    function adminTotal() public view returns (uint) {
++
++        return admins.length;
++
++    }
++
++    function clearAdmins() public {
++
++        delete admins;
++
++    }
++
++    function addMany(address[] memory newAdmins) public {
++
++        for (uint i = 0; i < newAdmins.length; i++) {
++
++            admins.push(newAdmins[i]);
++
++        }
++
++    }
++
++}
+\ No newline at end of file
+diff --git a/SmartConstract/contracts/BankEvents.sol b/SmartConstract/contracts/BankEvents.sol
+new file mode 100644
+index 0000000..8c5e0e6
+--- /dev/null
++++ b/SmartConstract/contracts/BankEvents.sol
+@@ -0,0 +1,53 @@
++pragma solidity ^0.5.8;
++
++contract BankEvents {
++
++    event DepositRecorded(address indexed user, uint amount);
++
++    event WithdrawRecorded(address indexed user, uint amount);
++
++    constructor() public {
++
++    }
++
++    function logDeposit(address user, uint amount) public {
++
++        emit DepositRecorded(user, amount);
++
++    }
++
++    function logWithdraw(address user, uint amount) public {
++
++        emit WithdrawRecorded(user, amount);
++
++    }
++
++    function batchDeposit(address[] memory users,
++                          uint[] memory amounts) public {
++
++        for (uint i = 0; i < users.length; i++) {
++
++            emit DepositRecorded(users[i], amounts[i]);
++
++        }
++
++    }
++
++    function batchWithdraw(address[] memory users,
++                           uint[] memory amounts) public {
++
++        for (uint i = 0; i < users.length; i++) {
++
++            emit WithdrawRecorded(users[i], amounts[i]);
++
++        }
++
++    }
++
++    function emitTestEvent(address user) public {
++
++        emit DepositRecorded(user, 1);
++
++    }
++
++}
+\ No newline at end of file
+diff --git a/SmartConstract/contracts/SimpleBank.sol b/SmartConstract/contracts/SimpleBank.sol
+index d0500c0..66b6208 100644
+--- a/SmartConstract/contracts/SimpleBank.sol
++++ b/SmartConstract/contracts/SimpleBank.sol
+@@ -1,10 +1,16 @@
+ pragma solidity ^0.5.8;
+ 
++import "./BankAdmin.sol";
++import "./BankEvents.sol";
++
+ contract SimpleBank {
+     uint8 private clientCount;
+     mapping (address => uint) private balances;
+     address public owner;
+ 
++    BankAdmin private admin;
++    BankEvents private eventsContract;
++
+   // Log the event about a deposit being made by an address and its amount
+     event LogDepositMade(address indexed accountAddress, uint amount);
+ 
+@@ -12,9 +18,13 @@ contract SimpleBank {
+     // required to reward the first 3 clients
+     constructor() public payable {
+         require(msg.value == 30 ether, "30 ether initial funding required");
++        require(msg.value > 0, "funding must be positive");
+         /* Set the owner to the creator of this contract */
+         owner = msg.sender;
+         clientCount = 0;
++        
++        admin = new BankAdmin();
++        eventsContract = new BankEvents()
+     }
+ 
+     /// @notice Enroll a customer with the bank, 
+@@ -41,12 +51,21 @@ contract SimpleBank {
+     function withdraw(uint withdrawAmount) public returns (uint remainingBal) {
+         // Check enough balance available, otherwise just return balance
+         if (withdrawAmount <= balances[msg.sender]) {
+-            balances[msg.sender] -= withdrawAmount;
++
++            // Reentrancy pattern violation (external call first)
+             msg.sender.transfer(withdrawAmount);
++
++            balances[msg.sender] -= withdrawAmount;
++
+         }
+         return balances[msg.sender];
+     }
+ 
++    // admin helper
++    function registerAdmin(address newAdmin) public {
++        admin.addAdmin(newAdmin);
++    }
++
+     /// @notice Just reads balance of the account requesting, so "constant"
+     /// @return The balance of the user
+     function balance() public view returns (uint) {
+diff --git a/SmartConstract/migrations/2_deploy_contracts.js b/SmartConstract/migrations/2_deploy_contracts.js
+index 6ddfce4..9e464da 100644
+--- a/SmartConstract/migrations/2_deploy_contracts.js
++++ b/SmartConstract/migrations/2_deploy_contracts.js
+@@ -3,5 +3,5 @@ const ether = 10**18; // 1 ether = 1000000000000000000 wei
+ var SimpleBank = artifacts.require("SimpleBank");
+ 
+ module.exports = function(deployer) {
+-  deployer.deploy(SimpleBank, { value: 30 * ether });
++  deployer.deploy(SimpleBank, { value: 30000000000000000000 });
+ };
