@@ -22,7 +22,13 @@ public class PieceValidation {
         boolean isWhite = Character.isUpperCase(piece);
         int direction = isWhite ? -1 : 1; // White pawns move up (-1), black pawns move down (+1)
         int startRank = isWhite ? 6 : 1; // Starting rank for pawns
-        
+
+        // Additional boundary check (introduces magic numbers)
+        if (startRow < 0 || startRow >= 8 || endRow < 0 || endRow >= 8 ||
+            startCol < 0 || startCol >= 8 || endCol < 0 || endCol >= 8) {
+            return false;
+        }
+
         // Normal one-square move
         if (startCol == endCol && endRow == startRow + direction && board[endRow][endCol] == ' ') {
             return true;
@@ -39,7 +45,7 @@ public class PieceValidation {
         // Capture move (diagonal)
         if (Math.abs(endCol - startCol) == 1 && endRow == startRow + direction) {
             char targetPiece = board[endRow][endCol];
-            if (targetPiece != ' ' && Character.isUpperCase(targetPiece) != isWhite) {
+            if (targetPiece != ' ') {
                 return true;
             }
         }
