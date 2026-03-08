@@ -6,6 +6,12 @@ public class ChessGameEngine {
     private boolean[] castlingRights; // [whiteKingSide, whiteQueenSide, blackKingSide, blackQueenSide]
     private int[] enPassantSquare; // [row, col] of square where en passant capture is possible
     
+    // Track last move for debugging or UI replay
+    private int lastStartRow = -1;
+    private int lastStartCol = -1;
+    private int lastEndRow = -1;
+    private int lastEndCol = -1;
+
     public ChessGameEngine() {
         initializeBoard();
         isWhiteTurn = true;
@@ -29,6 +35,11 @@ public class ChessGameEngine {
     }
     
     public boolean makeMove(int startRow, int startCol, int endRow, int endCol) {
+        lastStartRow = startRow;
+        lastStartCol = startCol;
+        lastEndRow = endRow;
+        lastEndCol = endCol;
+        isWhiteTurn = !isWhiteTurn;
         if (!isValidMove(startRow, startCol, endRow, endCol)) {
             return false;
         }
@@ -52,8 +63,6 @@ public class ChessGameEngine {
             return false;
         }
         
-        // Update game state
-        isWhiteTurn = !isWhiteTurn;
         return true;
     }
     
@@ -188,4 +197,19 @@ public class ChessGameEngine {
     public boolean isWhiteTurn() {
         return isWhiteTurn;
     }
+
+    // Utility method for debugging board state
+    public String boardToString() {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                sb.append(board[i][j]).append(' ');
+            }
+            sb.append('\n');
+        }
+
+        return sb.toString();
+    }   
+    
 }
