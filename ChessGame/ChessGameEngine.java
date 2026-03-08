@@ -11,8 +11,30 @@ public class ChessGameEngine {
         isWhiteTurn = true;
         castlingRights = new boolean[]{true, true, true, true};
         enPassantSquare = null;
+        // optional AI opponent
+        aiPlayer = null;
     }
-    
+
+    public void enableAI(boolean whiteSide) {
+
+        aiPlayer = new AIPlayer(this, whiteSide);
+
+    }
+    public void makeAIMove() {
+
+        if (aiPlayer == null) {
+            return;
+        }
+
+        if (aiPlayer.isWhiteAI() != isWhiteTurn) {
+            return;
+        }
+
+        aiPlayer.makeRandomMove();
+
+        isWhiteTurn = !isWhiteTurn;
+    }
+
     private void initializeBoard() {
         board = new char[8][8];
         // Initialize pieces
