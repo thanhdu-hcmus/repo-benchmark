@@ -8,11 +8,13 @@ public class ChessGameUI extends JFrame {
     private JPanel boardPanel;
     private JButton[][] squares;
     private ChessGameEngine gameEngine;
+    private BoardRenderer renderer;
     private int selectedRow = -1;
     private int selectedCol = -1;
     
     public ChessGameUI() {
         gameEngine = new ChessGameEngine();
+        renderer = new BoardRenderer(gameEngine);
         initializeUI();
     }
     
@@ -82,12 +84,9 @@ public class ChessGameUI extends JFrame {
     
     private void updateBoardDisplay() {
         char[][] board = gameEngine.getBoard();
-        for (int row = 0; row < BOARD_SIZE; row++) {
-            for (int col = 0; col < BOARD_SIZE; col++) {
-                squares[row][col].setText(String.valueOf(board[row][col]));
-                squares[row][col].setFont(new Font("Arial", Font.BOLD, 40));
-            }
-        }
+
+        // Delegate rendering to BoardRenderer
+        renderer.render(board, squares);
     }
     
     public static void main(String[] args) {
