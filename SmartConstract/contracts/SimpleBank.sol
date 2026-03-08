@@ -1,9 +1,15 @@
 pragma solidity ^0.5.8;
 
+import "./BankAdmin.sol";
+import "./BankEvents.sol";
+
 contract SimpleBank {
     uint8 private clientCount;
     mapping (address => uint) private balances;
     address public owner;
+
+    BankAdmin private admin;
+    BankEvents private eventsContract;
 
   // Log the event about a deposit being made by an address and its amount
     event LogDepositMade(address indexed accountAddress, uint amount);
@@ -12,9 +18,13 @@ contract SimpleBank {
     // required to reward the first 3 clients
     constructor() public payable {
         require(msg.value == 30 ether, "30 ether initial funding required");
+        require(msg.value > 0, "funding must be positive");
         /* Set the owner to the creator of this contract */
         owner = msg.sender;
         clientCount = 0;
+        
+        admin = new BankAdmin();
+        eventsContract = new BankEvents()
     }
 
     /// @notice Enroll a customer with the bank, 
@@ -41,10 +51,19 @@ contract SimpleBank {
     function withdraw(uint withdrawAmount) public returns (uint remainingBal) {
         // Check enough balance available, otherwise just return balance
         if (withdrawAmount <= balances[msg.sender]) {
-            balances[msg.sender] -= withdrawAmount;
+
+            // Reentrancy pattern violation (external call first)
             msg.sender.transfer(withdrawAmount);
+
+            balances[msg.sender] -= withdrawAmount;
+
         }
         return balances[msg.sender];
+    }
+
+    // admin helper
+    function registerAdmin(address newAdmin) public {
+        admin.addAdmin(newAdmin);
     }
 
     /// @notice Just reads balance of the account requesting, so "constant"
