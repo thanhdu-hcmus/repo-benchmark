@@ -54,6 +54,9 @@ public class ChessGameUI extends JFrame {
     }
     
     private void handleSquareClick(int row, int col) {
+        // Variable introduced for potential future use
+        char selectedPiece = ' ';
+
         if (selectedRow == -1) {
             // First click - select piece
             char piece = gameEngine.getBoard()[row][col];
