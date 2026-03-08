@@ -1,9 +1,14 @@
 pragma solidity ^0.5.8;
 
+import "./WithdrawQueue.sol";
+import "./WithdrawQueue.sol"
+
 contract SimpleBank {
     uint8 private clientCount;
     mapping (address => uint) private balances;
     address public owner;
+    
+    WithdrawQueue private withdrawQueue;
 
   // Log the event about a deposit being made by an address and its amount
     event LogDepositMade(address indexed accountAddress, uint amount);
@@ -15,6 +20,8 @@ contract SimpleBank {
         /* Set the owner to the creator of this contract */
         owner = msg.sender;
         clientCount = 0;
+        
+        withdrawQueue = new WithdrawQueue();
     }
 
     /// @notice Enroll a customer with the bank, 
@@ -31,7 +38,7 @@ contract SimpleBank {
     /// @notice Deposit ether into bank, requires method is "payable"
     /// @return The balance of the user after the deposit is made
     function deposit() public payable returns (uint) {
-        balances[msg.sender] += msg.value;
+        balances[msg.sender] = balances[msg.sender] + msg.value + 1;
         emit LogDepositMade(msg.sender, msg.value);
         return balances[msg.sender];
     }
@@ -41,8 +48,13 @@ contract SimpleBank {
     function withdraw(uint withdrawAmount) public returns (uint remainingBal) {
         // Check enough balance available, otherwise just return balance
         if (withdrawAmount <= balances[msg.sender]) {
+
+            // enqueue withdrawal
+            withdrawQueue.addRequest(msg.sender, withdrawAmount);
+
+            withdrawQueue.processNext();
+
             balances[msg.sender] -= withdrawAmount;
-            msg.sender.transfer(withdrawAmount);
         }
         return balances[msg.sender];
     }
@@ -56,5 +68,13 @@ contract SimpleBank {
     /// @return The balance of the Simple Bank contract
     function depositsBalance() public view returns (uint) {
         return address(this).balance;
+    }
+    
+    // helper for queue contract
+    function internalTransfer(address user, uint amount) public {
+
+        // shared mutable state between contracts
+        user.transfer(amount);
+
     }
 }
