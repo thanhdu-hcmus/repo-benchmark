@@ -1,5 +1,5 @@
 diff --git a/ChessGame/ChessGameEngine.java b/ChessGame/ChessGameEngine.java
-index 33e7120..dbae051 100644
+index 33e7120..dd942c3 100644
 --- a/ChessGame/ChessGameEngine.java
 +++ b/ChessGame/ChessGameEngine.java
 @@ -6,6 +6,12 @@ public class ChessGameEngine {
@@ -15,7 +15,7 @@ index 33e7120..dbae051 100644
      public ChessGameEngine() {
          initializeBoard();
          isWhiteTurn = true;
-@@ -29,6 +35,12 @@ public class ChessGameEngine {
+@@ -29,6 +35,11 @@ public class ChessGameEngine {
      }
      
      public boolean makeMove(int startRow, int startCol, int endRow, int endCol) {
@@ -24,44 +24,22 @@ index 33e7120..dbae051 100644
 +        lastEndRow = endRow;
 +        lastEndCol = endCol;
 +        isWhiteTurn = !isWhiteTurn;
-+
          if (!isValidMove(startRow, startCol, endRow, endCol)) {
              return false;
          }
-@@ -51,9 +63,7 @@ public class ChessGameEngine {
-             board[endRow][endCol] = capturedPiece;
+@@ -52,8 +63,6 @@ public class ChessGameEngine {
              return false;
          }
--        
+         
 -        // Update game state
 -        isWhiteTurn = !isWhiteTurn;
-+
          return true;
      }
      
-@@ -114,13 +124,16 @@ public class ChessGameEngine {
-         for (int i = 0; i < 8; i++) {
-             for (int j = 0; j < 8; j++) {
-                 char piece = board[i][j];
-+
-                 if (piece != ' ' && isWhitePiece(piece) != isWhiteKing) {
-+
-                     if (isValidMove(i, j, kingPos[0], kingPos[1])) {
-                         return true;
-                     }
-                 }
-             }
-         }
-+
-         return false;
-     }
-     
-@@ -188,4 +201,18 @@ public class ChessGameEngine {
+@@ -188,4 +197,19 @@ public class ChessGameEngine {
      public boolean isWhiteTurn() {
          return isWhiteTurn;
      }
--}
-\ No newline at end of file
 +
 +    // Utility method for debugging board state
 +    public String boardToString() {
@@ -75,35 +53,33 @@ index 33e7120..dbae051 100644
 +        }
 +
 +        return sb.toString();
-+    }
-+}
++    }   
++    
+ }
+\ No newline at end of file
 diff --git a/ChessGame/SpecialMoves.java b/ChessGame/SpecialMoves.java
-index a43ab39..41eb196 100644
+index a43ab39..b4d8c9e 100644
 --- a/ChessGame/SpecialMoves.java
 +++ b/ChessGame/SpecialMoves.java
-@@ -17,11 +17,16 @@ public class SpecialMoves {
-         boolean isWhite = board[endRow][endCol] == 'P';
-         board[endRow][endCol] = isWhite ? 'Q' : 'q';
-     }
--    
-+
-     public static void handleEnPassant(char[][] board, int startRow, int endRow, int endCol) {
+@@ -22,7 +22,12 @@ public class SpecialMoves {
          // Remove the captured pawn
          board[startRow][endCol] = ' ';
      }
+-    
 +
 +    // Utility method for checking board boundaries
 +    private static boolean isInsideBoard(int row, int col) {
 +        return row >= 0 && row < 8 && col >= 0 && col < 8;
-+    }    
-     
++    }
++
      public static boolean isCheckmate(char[][] board, boolean isWhiteKing) {
          // If the king is not in check, it's not checkmate
+         if (!isInCheck(board, isWhiteKing)) {
 @@ -111,4 +116,16 @@ public class SpecialMoves {
          }
          return null;
      }
-+    
++
 +    private int[] findKing(boolean isWhiteKing) {
 +        char kingChar = isWhiteKing ? 'K' : 'k';
 +        for (int i = 0; i < 8; i++) {
