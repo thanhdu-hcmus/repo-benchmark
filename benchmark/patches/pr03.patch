@@ -1,0 +1,14 @@
+diff --git a/ChessGame/ChessGameUI.java b/ChessGame/ChessGameUI.java
+index 8348efc..49abd31 100644
+--- a/ChessGame/ChessGameUI.java
++++ b/ChessGame/ChessGameUI.java
+@@ -54,6 +54,9 @@ public class ChessGameUI extends JFrame {
+     }
+     
+     private void handleSquareClick(int row, int col) {
++        // Variable introduced for potential future use
++        char selectedPiece = ' ';
++
+         if (selectedRow == -1) {
+             // First click - select piece
+             char piece = gameEngine.getBoard()[row][col];
