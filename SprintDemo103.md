@@ -4,39 +4,26 @@ In this sprint, I mainly focused on two tickets.
 ### Code review Pipeline
 The first one is about integrating the AI code review pipeline into our BAU repositories.
 For this task, the goal was to integrate the code review pipeline into repositories such as dapps-workflow-manager, using GCAM for deployment and orchestration.
-From a timeline perspective, this ticket was created right after I completed POC version 1 of the AI code review system. That version performs code review based purely on diff changes, without using RAG yet.
+From a timeline perspective, this ticket was created right after I completed POC version 1 of the AI code review system. That version performs code review based purely on diff changes using Vertex AI, without using RAG yet.
 
-As part of this work, I created a reusable workflow template and a main controller script in the controller repository.
-The idea is to make the pipeline reusable and easier to maintain across different repositories.
+As part of this work, I created a reusable workflow template and put these main scripts in the controller repository. I also implemented a flag-driven configuration approach, where each project can define its workflow configuration through a project-level config file.
 
-I also implemented a flag-driven configuration approach, where each project can define its workflow configuration through a project-level config file.
-This allows us to control things like the POC version or AI model selection without modifying the pipeline itself.
-
-After that, I created a GCAM template to deploy the entry workflow.
+After that, I created a GCAM template to deploy the entry workflow. The code review workflow will be triggered whenever a pull request is created or updated.
 For now, this deployment is enabled only for the workflow-manager repository, while the other dapps repositories are currently ignored.
 
-Overall, this work establishes the initial integration foundation for the AI code review pipeline within our BAU repositories.
-
-The first one is about integrating the AI code review pipeline into our BAU repositories.
+When we need to scale, we can simply update the repository list in GCAM. This allows us to deploy the code review workflow across multiple repositories.
 
 ### Evaluating AI Code Review Platforms
 #### Intro
 The second task in this sprint focuses on evaluating different AI code review platforms, including Codacy AI, Vertex AI using my POC, and GitHub AI Code Review.
 
-At the moment, before we fully understand the cost structure of GitHub AI, we decided to temporarily keep that feature disabled. So the current comparison is mainly between Codacy AI and Vertex AI.
+The details have been updated on this page. 
 
-For the Vertex AI solution, I’m currently using a version of my code that integrates RAG with BigQuery. Because of that, I had to redesign part of the pipeline to support the RAG workflow.
-
-Specifically, I implemented an ingestion pipeline that triggers whenever code is pushed to the main branch. This pipeline generates embedding vectors in BigQuery, which are later used for contextual retrieval during the code review process.
-
-Then, when a pull request is created, the AI code review pipeline is triggered automatically. The pipeline retrieves relevant code context using RAG and performs the analysis before posting review comments back to the pull request.
-
-In addition to that, I also improved several features compared to the earlier POC version.
-For example, the system can now generate code fixes using the GitHub suggestion format, so developers can apply the suggested fixes directly from the PR interface. Previously it only provided improvement comments.
+#### Vertex AI 
+For the Vertex AI solution, I’m using a version of my pipeline that integrates RAG with BigQuery. An ingestion pipeline generates embeddings whenever code is pushed to the main branch, and the AI review is automatically triggered when a pull request is created. The system retrieves relevant code context using RAG and posts review comments back to the PR. Compared to the earlier POC, it can now also generate code fixes using the GitHub suggestion format.
 
 --------------
 #### Codacy AI Evaluation
-
 For Codacy AI, the feature can be enabled at the repository level. During testing, we noticed that the feature was only visible when accessing Codacy through the ChromeOS browser, while the option did not appear on our workstation browser.
 
 Codacy AI provides context-aware pull request feedback, and it can help with tasks such as:
@@ -46,31 +33,35 @@ Codacy AI provides context-aware pull request feedback, and it can help with tas
 
 This feature leverages OpenAI models behind the scenes.
 ----------------
-#### Example PR Test
+#### Github AI 
+GitHub AI is quite similar to Codacy AI. The feature can be enabled at either the repository or organization level, and there are also several related rulesets. It also provides quite a few configuration options.
 
-To evaluate both tools, I created a test pull request designed specifically to validate the RAG capability.
+#### Example PR Test
+To evaluate among tools, I created a test pull request designed specifically to validate the RAG capability.
 
 When a PR is created, Codacy AI automatically generates a summary table.
 If we want to request a full AI review, we can simply click “Run Reviewer” in the summary section. The review is usually completed within a few seconds.
 At the same time, my Vertex AI pipeline is also triggered automatically.
 
+Github AI, Open the Reviewers menu, then select Copilot. Click the cycle button next to Copilot's name if you want Copilot to re-review it.
+
 Here you can see the results side by side.
 
-Codacy AI posts review comments directly on the PR, using a format very similar to what my POC generates.
-This one here is from Codacy production, and this one is generated by my Vertex AI pipeline.
+Github AI, Codacy AI posts review comments directly on the PR, using a format very similar to what my POC generates.
+This one here is from Codacy production, this one is from Copilot and this one is generated by my Vertex AI pipeline.
 
-1. For example, in this case both tools detected that a Python function was being called without importing the required libraries, and both of them generated review comments pointing out the issue.
+1. For example, in this case these tools detected that a Python function was being called without importing the required libraries, and both of them generated review comments pointing out the issue.
 
 2. Another example is that Codacy AI detected two variables that were missing type declarations.
 
-3. On the other hand, my Vertex AI pipeline detected that the function get_jwt was missing two required parameters, and that the function get_installation_id was missing the org argument.
+3. On the other hand, Github Copilot and my Vertex AI pipeline detected that the function get_jwt was missing two required parameters, and that the function get_installation_id was missing the org argument.
 
 -> This detection was possible because of the RAG capability, which allowed the model to retrieve the function definitions from another file called token_generation.
+In the meanwhile, Codacy was missing this error.
 
 4. Codacy AI also detected a related issue in this case, but it flagged it as code duplication, because it recognized that the code was cloned from an existing Python file. This comes from Codacy’s repository-context awareness.
 ------------------
-#### Benchmark Dataset for Evaluation
-
+#### Synthetic Benchmark Dataset for Evaluation
 Since neither tool can cover every scenario perfectly, I created a series of pull requests to systematically evaluate their accuracy and coverage.
 The original source code was taken from public repositories.
 
@@ -82,12 +73,17 @@ The issues are categorized into three levels of difficulty:
 
 This dataset will help us compare the effectiveness of each AI code review platform in a more objective way.
 
+After each tool performs the code review on a PR, I scan the generated comments and compare them with the expected issues list, then aggregate the results in this Google Sheet. If a comment matches the expected issue, it’s marked as correct. If it’s incorrect, it’s marked as a false alarm. For newly discovered issues that are meaningful, I label them as valid suggestions, and if the value is low, I mark them as low-value comments.
+
+The results are evaluated using two metrics: precision and coverage (or recall). Precision measures the percentage of valid comments out of the total comments generated. Coverage, or recall, measures how many of the predefined expected issues are actually detected by the tool.
+
+- The results show that GitHub AI has higher precision across the total number of generated comments, meaning it produces less noise. Codacy AI shows a similar precision level, while my Vertex AI solution is slightly lower. This is mainly because my tool currently generates a larger number of comments, which reduces the overall percentage of correct ones.
+- In terms of coverage, GitHub AI was able to detect all of the predefined issues. It is followed by my POC, and then Codacy AI.
 ------------------------
 Codacy Review Triggering Behavior
 One additional detail about Codacy AI is how the review process is triggered.
 - Automatically: Codacy runs the reviewer once automatically when a pull request is opened.
 - Manually: For later updates, we need to click “Run Reviewer” in the pull request comment or call their public API to trigger another review.
-
 
 Linter error (easy)
 1.1 Unused Variable
@@ -113,3 +109,34 @@ Architecture Errors (Hard)
 3.4 Tight Coupling
 3.5 N+1 Query Problem
 3.6 Race Condition (Concurrency)
+
+#### Real-world Benchmark Dataset
+To further evaluate the bug detection capability of these tools, I also looked at benchmarking approaches used by several companies, such as the ones from CodeRabbit and Greptile. Inspired by Greptile’s approach, I prepared a source code dataset to run additional tests and compare how well each tool can detect real issues.
+
+For the current evaluation, the source code dataset is taken from well-known public repositories such as Keycloak. This Java codebase is relatively large and complex, and the maintainers have already created a number of pull requests that introduce specific bugs for testing purposes.
+
+What you see here is a summary table that lists each bug, its severity, and whether each AI tool was able to detect it. At the moment, the dataset contains 10 bugs in total. A tool is marked as successful only when it produces an explicit line-level PR comment that correctly points to the problematic code and explains the issue. Summary-only comments are not counted in the evaluation.
+
+To prepare this dataset, I wrote several scripts to mine pull requests from the repository. The scripts extract the code changes from a list of PRs and store them as patch files. Then another script uses these patch files to automatically recreate a series of pull requests in the testing environment.
+
+Finally, based on the bug descriptions associated with each PR, I manually verify whether the tools correctly identify the expected errors and the correct code locations. This allows us to measure how accurately each AI reviewer can detect real issues in a complex Java codebase.
+
+
+#### Oneline-comment Summary tablel
+As you can see from the results, GitHub Copilot AI shows better bug detection capability compared to both my POC and Codacy AI.
+
+Regarding the weaknesses of each tool:
+For my POC, it was able to detect some of the expected issues. However, it currently generates a relatively large number of comments, and some of them are incorrect due to missing context, which creates noise for the reader.
+
+For Codacy AI, I would say the bug detection capability is fairly solid, and the number of comments generated is reasonable. However, its understanding of repository context seems limited, so in some cases the detection is not very effective.
+
+Overall, GitHub AI appears to be the better option in this comparison. It demonstrates stronger repository context awareness, detects more issues accurately—including several issues that my POC was able to find—and the number of comments it generates is also appropriate, making the review output clearer and more useful.
+
+#### Personal Evaluation
+From my perspective, the results are quite interesting. Based on the current evaluation, GitHub AI seems to perform the best among the three tools in terms of bug detection quality.
+
+Another aspect I’m currently considering is the cost of using each solution. Personally, I’m leaning toward GitHub AI. In terms of performance, it is currently leading among the three tools, and the estimated cost of around $0.04 per PR seems quite reasonable.
+
+In comparison, if we continue with the Vertex AI approach that I built, we would need to account for several additional costs, including Vertex AI token usage and BigQuery storage for the RAG pipeline. This can become significant, especially when dealing with large real-world repositories like Keycloak, which contain hundreds of thousands of files.
+
+At the moment, the Keycloak repository I’m testing with is actually only a small subset of the original repository. To reduce the RAG cost, I only kept the files that are relevant to the PR test cases, and removed other unrelated parts of the repository.
