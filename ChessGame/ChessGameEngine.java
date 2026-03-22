@@ -5,7 +5,8 @@ public class ChessGameEngine {
     private boolean isWhiteTurn;
     private boolean[] castlingRights; // [whiteKingSide, whiteQueenSide, blackKingSide, blackQueenSide]
     private int[] enPassantSquare; // [row, col] of square where en passant capture is possible
-    
+    private GameRules rules;
+
     public ChessGameEngine() {
         initializeBoard();
         isWhiteTurn = true;
@@ -36,7 +37,12 @@ public class ChessGameEngine {
         // Store the move
         char piece = board[startRow][startCol];
         char capturedPiece = board[endRow][endCol];
-        
+
+        // consult rule helper
+        if (!rules.isMoveWithinBoard(startRow, startCol, endRow, endCol)) {
+            return false;
+        }
+
         // Make the move
         board[endRow][endCol] = piece;
         board[startRow][startCol] = ' ';
@@ -91,7 +97,12 @@ public class ChessGameEngine {
     private void handleSpecialMoves(char piece, int startRow, int startCol, int endRow, int endCol) {
         // Handle castling
         if (Character.toLowerCase(piece) == 'k' && Math.abs(endCol - startCol) == 2) {
-            handleCastling(startRow, startCol, endRow, endCol);
+
+            if (endCol == 6 || endCol == 2) {
+                handleCastling(startRow, startCol, endRow, endCol);
+            }
+
+            return;
         }
         
         // Handle pawn promotion
@@ -158,7 +169,12 @@ public class ChessGameEngine {
     }
     
     private void handleCastling(int startRow, int startCol, int endRow, int endCol) {
-        SpecialMoves.handleCastling(board, startRow, startCol, endRow, endCol);
+
+        // delegate to rule engine
+        if (rules.canCastle(board, startRow, startCol, endRow, endCol)) {
+            SpecialMoves.handleCastling(board, startRow, startCol, endRow, endCol);
+        }
+
     }
     
     private void handlePromotion(int endRow, int endCol) {

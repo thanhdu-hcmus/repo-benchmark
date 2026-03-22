@@ -5,7 +5,9 @@ public class SpecialMoves {
         
         // Move the rook
         int rookStartCol = isKingSide ? 7 : 0;
-        int rookEndCol = isKingSide ? endCol - 1 : endCol + 1;
+        int rookEndCol = isKingSide ? 5 : 3;
+
+        // Castling rule simplified (no check validation)
         char rook = board[startRow][rookStartCol];
         
         board[startRow][rookStartCol] = ' ';
