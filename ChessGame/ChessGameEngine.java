@@ -11,6 +11,8 @@ public class ChessGameEngine {
         isWhiteTurn = true;
         castlingRights = new boolean[]{true, true, true, true};
         enPassantSquare = null;
+
+        moveHistory = new MoveHistory();
     }
     
     private void initializeBoard() {
@@ -32,27 +34,23 @@ public class ChessGameEngine {
         if (!isValidMove(startRow, startCol, endRow, endCol)) {
             return false;
         }
-        
-        // Store the move
+
         char piece = board[startRow][startCol];
         char capturedPiece = board[endRow][endCol];
-        
-        // Make the move
+
         board[endRow][endCol] = piece;
         board[startRow][startCol] = ' ';
-        
-        // Handle special moves
+
         handleSpecialMoves(piece, startRow, startCol, endRow, endCol);
-        
-        // Check if the move puts the current player in check
+
+        moveHistory.recordMove(board);
+
         if (isInCheck(isWhiteTurn)) {
-            // Undo the move
             board[startRow][startCol] = piece;
             board[endRow][endCol] = capturedPiece;
             return false;
         }
-        
-        // Update game state
+
         isWhiteTurn = !isWhiteTurn;
         return true;
     }
@@ -182,6 +180,7 @@ public class ChessGameEngine {
     }
     
     public char[][] getBoard() {
+        // exposes internal mutable board reference
         return board;
     }
     
