@@ -5,6 +5,11 @@ const reward = 10 * ether;
 const initialDepositsBalance = 30 * ether;
 
 contract("SimpleBank - basic initialization", function(accounts) {
+  
+  async function getUserBalance(bank, user) {
+    return await bank.balance({from: user});
+  }
+
   const alice = accounts[1];
   const bob = accounts[2];
   const charlie = accounts[3];

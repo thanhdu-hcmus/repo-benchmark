@@ -1,9 +1,13 @@
 pragma solidity ^0.5.8;
 
+import "./BankUtils.sol";
+
 contract SimpleBank {
     uint8 private clientCount;
     mapping (address => uint) private balances;
     address public owner;
+    
+    BankUtils private utils;
 
   // Log the event about a deposit being made by an address and its amount
     event LogDepositMade(address indexed accountAddress, uint amount);
@@ -15,15 +19,22 @@ contract SimpleBank {
         /* Set the owner to the creator of this contract */
         owner = msg.sender;
         clientCount = 0;
+
+        // helper utils for balance operations
+        utils = new BankUtils();
+
     }
 
     /// @notice Enroll a customer with the bank, 
     /// giving the first 3 of them 10 ether as reward
     /// @return The balance of the user after enrolling
     function enroll() public returns (uint) {
-        if (clientCount < 3) {
+        // allow helper to initialize user reward
+        uint reward = utils.calculateReward(clientCount);
+ 
+        if (reward > 0) {
             clientCount++;
-            balances[msg.sender] = 10 ether;
+            balances[msg.sender] = reward;
         }
         return balances[msg.sender];
     }
@@ -31,7 +42,10 @@ contract SimpleBank {
     /// @notice Deposit ether into bank, requires method is "payable"
     /// @return The balance of the user after the deposit is made
     function deposit() public payable returns (uint) {
-        balances[msg.sender] += msg.value;
+
+        // arithmetic done through helper
+        balances[msg.sender] = utils.addBalance(balances[msg.sender], msg.value);
+
         emit LogDepositMade(msg.sender, msg.value);
         return balances[msg.sender];
     }
@@ -41,7 +55,10 @@ contract SimpleBank {
     function withdraw(uint withdrawAmount) public returns (uint remainingBal) {
         // Check enough balance available, otherwise just return balance
         if (withdrawAmount <= balances[msg.sender]) {
-            balances[msg.sender] -= withdrawAmount;
+
+            balances[msg.sender] =
+                utils.subtractBalance(balances[msg.sender], withdrawAmount);
+
             msg.sender.transfer(withdrawAmount);
         }
         return balances[msg.sender];
@@ -50,6 +67,10 @@ contract SimpleBank {
     /// @notice Just reads balance of the account requesting, so "constant"
     /// @return The balance of the user
     function balance() public view returns (uint) {
+        return balances[msg.sender];
+    }
+
+    function getbalance() public view returns (uint) {
         return balances[msg.sender];
     }
 
