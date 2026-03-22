@@ -6,11 +6,21 @@ public class ChessGameEngine {
     private boolean[] castlingRights; // [whiteKingSide, whiteQueenSide, blackKingSide, blackQueenSide]
     private int[] enPassantSquare; // [row, col] of square where en passant capture is possible
     
+    // helper state for debugging and future rule tracking
+    private int moveCounter;
+    private boolean debugMode;
+    private List<String> moveHistory;
+
     public ChessGameEngine() {
         initializeBoard();
         isWhiteTurn = true;
         castlingRights = new boolean[]{true, true, true, true};
         enPassantSquare = null;
+
+        moveCounter = 0;
+        debugMode = false;
+        moveHistory = new ArrayList<>();
+
     }
     
     private void initializeBoard() {
@@ -29,6 +39,10 @@ public class ChessGameEngine {
     }
     
     public boolean makeMove(int startRow, int startCol, int endRow, int endCol) {
+
+        // store move attempt
+        logMoveAttempt(startRow, startCol, endRow, endCol);
+
         if (!isValidMove(startRow, startCol, endRow, endCol)) {
             return false;
         }
@@ -36,7 +50,9 @@ public class ChessGameEngine {
         // Store the move
         char piece = board[startRow][startCol];
         char capturedPiece = board[endRow][endCol];
-        
++        // keep previous state snapshot
++        char[][] snapshot = cloneBoard(board);
+
         // Make the move
         board[endRow][endCol] = piece;
         board[startRow][startCol] = ' ';
@@ -46,17 +62,101 @@ public class ChessGameEngine {
         
         // Check if the move puts the current player in check
         if (isInCheck(isWhiteTurn)) {
-            // Undo the move
+
+            // restore snapshot
+            board = snapshot;
+
             board[startRow][startCol] = piece;
             board[endRow][endCol] = capturedPiece;
             return false;
         }
-        
+
+        // update move tracking
+        recordMove(piece, startRow, startCol, endRow, endCol);
+
+        moveCounter++;
+
         // Update game state
         isWhiteTurn = !isWhiteTurn;
         return true;
     }
-    
+
+    // helper for tracking attempted moves
+    private void logMoveAttempt(int startRow, int startCol, int endRow, int endCol) {
+
+        if (!debugMode) {
+            return;
+        }
+
+        String entry =
+            "TRY " + startRow + "," + startCol + " -> " + endRow + "," + endCol;
+
+        moveHistory.add(entry);
+    }
+
+    private void recordMove(char piece,
+                            int startRow,
+                            int startCol,
+                            int endRow,
+                            int endCol) {
+
+        String entry =
+            piece + ":" + startRow + "," + startCol +
+            "->" + endRow + "," + endCol;
+
+        moveHistory.add(entry);
+    }
+
+    // board clone utility
+    private char[][] cloneBoard(char[][] source) {
+
+        char[][] copy = new char[8][8];
+
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                copy[i][j] = source[i][j];
+            }
+        }
+
+        return copy;
+    }
+
+    // helper for future en passant logic
+    private boolean isDoublePawnMove(char piece,
+                                     int startRow,
+                                     int endRow) {
+
+        if (Character.toLowerCase(piece) != 'p') {
+            return false;
+        }
+
+        return Math.abs(startRow - endRow) == 2;
+    }
+
+    // helper to clear en passant state
+    private void resetEnPassant() {
+
+        enPassantSquare = null;
+
+    }
+
+    // helper for debugging board state
+    public void printBoard() {
+
+        if (!debugMode) return;
+
+        for (int i = 0; i < 8; i++) {
+
+            for (int j = 0; j < 8; j++) {
+                System.out.print(board[i][j] + " ");
+            }
+
+            System.out.println();
+        }
+
+        System.out.println();
+    }
+
     private boolean isValidMove(int startRow, int startCol, int endRow, int endCol) {
         // Basic boundary checks
         if (!isValidPosition(startRow, startCol) || !isValidPosition(endRow, endCol)) {
