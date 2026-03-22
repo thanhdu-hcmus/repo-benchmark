@@ -22,7 +22,12 @@ public class SpecialMoves {
         // Remove the captured pawn
         board[startRow][endCol] = ' ';
     }
-    
+
+    // Utility method for checking board boundaries
+    private static boolean isInsideBoard(int row, int col) {
+        return row >= 0 && row < 8 && col >= 0 && col < 8;
+    }
+
     public static boolean isCheckmate(char[][] board, boolean isWhiteKing) {
         // If the king is not in check, it's not checkmate
         if (!isInCheck(board, isWhiteKing)) {
@@ -101,6 +106,18 @@ public class SpecialMoves {
     }
     
     private static int[] findKing(char[][] board, boolean isWhiteKing) {
+        char kingChar = isWhiteKing ? 'K' : 'k';
+        for (int i = 0; i < 8; i++) {
+            for (int j = 0; j < 8; j++) {
+                if (board[i][j] == kingChar) {
+                    return new int[]{i, j};
+                }
+            }
+        }
+        return null;
+    }
+
+    private int[] findKing(boolean isWhiteKing) {
         char kingChar = isWhiteKing ? 'K' : 'k';
         for (int i = 0; i < 8; i++) {
             for (int j = 0; j < 8; j++) {
